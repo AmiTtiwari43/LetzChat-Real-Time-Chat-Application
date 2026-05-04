@@ -58,7 +58,7 @@ signupForm.addEventListener('submit', (e) => {
 });
 
 socket.on('signupSuccess', () => {
-    alert('Account created! Please log in.');
+    showToast('Account created! Please log in.', 'success');
     signupBox.classList.add('hidden');
     loginBox.classList.remove('hidden');
 });
@@ -179,26 +179,24 @@ function updateSidebar() {
     `).join('');
 }
 
-// Leave Room Handling
+// Logout Handling
 document.getElementById('leave-btn').onclick = () => {
-    if (currentRoom) {
-        const roomToLeave = currentRoom;
-        socket.emit('leaveRoom', { room: roomToLeave });
-        
-        joinedRooms = joinedRooms.filter(r => r !== roomToLeave);
-        delete roomMessages[roomToLeave];
-        
-        if (joinedRooms.length > 0) {
-            switchRoom(joinedRooms[0]);
-        } else {
-            currentRoom = '';
-            appContainer.classList.add('hidden');
-            authContainer.classList.remove('hidden');
-            roomDashboardBox.classList.remove('hidden');
-            updateDashboardButtons();
-        }
-        updateSidebar();
-    }
+    socket.emit('logout');
+    
+    // Clear local state
+    currentUser = '';
+    currentRoom = '';
+    joinedRooms = [];
+    roomMessages = {};
+    
+    // Reset UI
+    appContainer.classList.add('hidden');
+    roomDashboardBox.classList.add('hidden');
+    authContainer.classList.remove('hidden');
+    loginBox.classList.remove('hidden');
+    signupBox.classList.add('hidden');
+    
+    showToast('Logged out successfully', 'success');
 };
 
 // Socket Events
@@ -237,7 +235,7 @@ socket.on('roomUsers', ({ room, users }) => {
     }
 });
 
-socket.on('error', (msg) => alert(msg));
+socket.on('error', (msg) => showToast(msg, 'error'));
 
 // Message Send
 chatForm.addEventListener('submit', (e) => {
@@ -293,3 +291,26 @@ function escapeHtml(text) {
 }
 
 document.getElementById('toggle-users').onclick = () => document.getElementById('user-sidebar').classList.toggle('hidden');
+
+// Toast Notification System
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    // Icon based on type
+    const icon = type === 'success' 
+        ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>'
+        : '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+        
+    toast.innerHTML = `${icon} <span>${message}</span>`;
+    container.appendChild(toast);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.classList.add('hiding');
+        toast.addEventListener('animationend', () => {
+            toast.remove();
+        });
+    }, 3000);
+}

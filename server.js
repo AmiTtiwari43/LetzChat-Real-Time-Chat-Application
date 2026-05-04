@@ -153,6 +153,27 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Handle Logout
+    socket.on('logout', () => {
+        const user = users[socket.id];
+        if (user) {
+            user.rooms.forEach(room => {
+                socket.to(room).emit('message', {
+                    user: 'System',
+                    text: `${user.username} has logged out`,
+                    time: new Date().toLocaleTimeString()
+                });
+                socket.leave(room);
+            });
+
+            const roomsToUpdate = [...user.rooms];
+            delete users[socket.id];
+            
+            roomsToUpdate.forEach(room => broadcastRoomInfo(room));
+            console.log(`${user.username} logged out`);
+        }
+    });
+
     // Handle Disconnect
     socket.on('disconnect', () => {
         const user = users[socket.id];
